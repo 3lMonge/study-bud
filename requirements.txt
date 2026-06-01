@@ -2,3 +2,8 @@ streamlit
 pymupdf
 chromadb
 sentence-transformers
+transformers
+torch
+accelerate
+hugginface_hub
+llama-cpp-python

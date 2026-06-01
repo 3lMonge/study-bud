@@ -2,12 +2,19 @@ import streamlit as st
 from sentence_transformers import SentenceTransformer
 
 
+EMBEDDING_MODEL_NAME = "google/embeddinggemma-300m"
+
+
 @st.cache_resource
 def load_embedding_model():
     """
-    Loads the embedding model once and caches it.
+    Loads the EmbeddingGemma model once and caches it.
+
+    Note:
+        The first time this runs, it may download the model from Hugging Face.
+        You may need to accept the Gemma license on Hugging Face first.
     """
-    return SentenceTransformer("all-MiniLM-L6-v2")
+    return SentenceTransformer(EMBEDDING_MODEL_NAME)
 
 
 def embed_text(text):
@@ -16,3 +23,10 @@ def embed_text(text):
     """
     model = load_embedding_model()
     return model.encode(text).tolist()
+
+
+def get_embedding_model_name():
+    """
+    Returns the active embedding model name.
+    """
+    return EMBEDDING_MODEL_NAME

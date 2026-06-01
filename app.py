@@ -1,12 +1,10 @@
 import streamlit as st
 
-from ui.documents_page import (
-    render_upload_page,
-    render_database_status_page,
-    render_test_search_page
-)
-
+from ui.home_page import render_home_page
+from ui.upload_page import render_upload_page
+from ui.select_page import render_select_page
 from ui.chat_page import render_chat_page
+from ui.test_page import render_test_page
 
 from services.vector_db_service import get_database_info
 
@@ -19,34 +17,14 @@ st.set_page_config(
 
 
 # -----------------------------
-# Custom CSS
+# Session State
 # -----------------------------
 
-st.markdown(
-    """
-    <style>
-    section[data-testid="stSidebar"] {
-        position: relative;
-    }
+if "active_page" not in st.session_state:
+    st.session_state.active_page = "Home"
 
-    .sidebar-status {
-        position: fixed;
-        bottom: 20px;
-        width: 260px;
-        padding: 12px;
-        border-radius: 10px;
-        background-color: rgba(240, 242, 246, 0.9);
-        font-size: 0.85rem;
-    }
-
-    .sidebar-status-title {
-        font-weight: 700;
-        margin-bottom: 8px;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+if "selected_documents" not in st.session_state:
+    st.session_state.selected_documents = []
 
 
 # -----------------------------
@@ -55,67 +33,59 @@ st.markdown(
 
 st.sidebar.title("Study Agent")
 
-st.sidebar.markdown("## Documents")
+if st.sidebar.button("Home", use_container_width=True):
+    st.session_state.active_page = "Home"
 
-documents_page = st.sidebar.radio(
-    "Document Tools",
-    [
-        "Upload",
-        "Database Status",
-        "Test Search"
-    ],
-    label_visibility="collapsed"
-)
-
-st.sidebar.markdown("---")
-
-st.sidebar.markdown("## Chat")
-
-chat_selected = st.sidebar.button("Open Chat")
-
-
-# -----------------------------
-# Page Routing
-# -----------------------------
-
-if "active_page" not in st.session_state:
+if st.sidebar.button("Upload", use_container_width=True):
     st.session_state.active_page = "Upload"
 
-if chat_selected:
+if st.sidebar.button("Select", use_container_width=True):
+    st.session_state.active_page = "Select"
+
+if st.sidebar.button("Chat", use_container_width=True):
     st.session_state.active_page = "Chat"
-else:
-    st.session_state.active_page = documents_page
+
+if st.sidebar.button("Test", use_container_width=True):
+    st.session_state.active_page = "Test"
 
 
-st.title("StudyBud")
+# -----------------------------
+# Main Page Routing
+# -----------------------------
 
-if st.session_state.active_page == "Upload":
+if st.session_state.active_page == "Home":
+    render_home_page()
+
+elif st.session_state.active_page == "Upload":
     render_upload_page()
 
-elif st.session_state.active_page == "Database Status":
-    render_database_status_page()
-
-elif st.session_state.active_page == "Test Search":
-    render_test_search_page()
+elif st.session_state.active_page == "Select":
+    render_select_page()
 
 elif st.session_state.active_page == "Chat":
     render_chat_page()
 
+elif st.session_state.active_page == "Test":
+    render_test_page()
+
 
 # -----------------------------
-# Sidebar Bottom Status
+# Sidebar Status
 # -----------------------------
+
+st.sidebar.divider()
 
 db_info = get_database_info()
+selected_docs = st.session_state.get("selected_documents", [])
 
-st.sidebar.markdown(
-    f"""
-    <div class="sidebar-status">
-        <div class="sidebar-status-title">Vector DB Status</div>
-        <div><strong>Stored Chunks:</strong> {db_info["stored_chunks"]}</div>
-        <div><strong>Database:</strong> {db_info["db_path"]}</div>
-        <div><strong>Collection:</strong> {db_info["collection_name"]}</div>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+if selected_docs:
+    selected_text = f"{len(selected_docs)} selected"
+else:
+    selected_text = "None"
+
+st.sidebar.subheader("Vector DB Status")
+
+st.sidebar.write(f"**Stored Chunks:** {db_info['stored_chunks']}")
+st.sidebar.write(f"**Documents:** {db_info['document_count']}")
+st.sidebar.write(f"**Selected:** {selected_text}")
+st.sidebar.write(f"**Collection:** {db_info['collection_name']}")

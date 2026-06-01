@@ -71,17 +71,48 @@ def store_pdf_pages(filename, pages):
     return stored_count
 
 
-def search_vector_db(query, n_results=5):
+def build_document_filter(selected_documents):
+    """
+    Builds a ChromaDB metadata filter based on selected documents.
+    """
+    if not selected_documents:
+        return None
+
+    if len(selected_documents) == 1:
+        return {
+            "filename": selected_documents[0]
+        }
+
+    return {
+        "$or": [
+            {"filename": filename}
+            for filename in selected_documents
+        ]
+    }
+
+
+def search_vector_db(query, n_results=5, selected_documents=None):
     """
     Searches ChromaDB using semantic similarity.
+
+    If selected_documents is provided, the search is limited to those documents.
     """
     collection = get_collection()
     query_embedding = embed_text(query)
 
-    results = collection.query(
-        query_embeddings=[query_embedding],
-        n_results=n_results
-    )
+    document_filter = build_document_filter(selected_documents)
+
+    if document_filter:
+        results = collection.query(
+            query_embeddings=[query_embedding],
+            n_results=n_results,
+            where=document_filter
+        )
+    else:
+        results = collection.query(
+            query_embeddings=[query_embedding],
+            n_results=n_results
+        )
 
     return results
 
@@ -94,12 +125,71 @@ def get_database_count():
     return collection.count()
 
 
+def list_stored_documents():
+    """
+    Returns a list of unique documents stored in ChromaDB.
+
+    Output:
+        [
+            {
+                "filename": "paper.pdf",
+                "chunk_count": 12,
+                "page_count": 5
+            }
+        ]
+    """
+    collection = get_collection()
+
+    if collection.count() == 0:
+        return []
+
+    data = collection.get(
+        include=["metadatas"]
+    )
+
+    metadatas = data.get("metadatas", [])
+
+    documents = {}
+
+    for metadata in metadatas:
+        filename = metadata.get("filename")
+        page = metadata.get("page")
+
+        if filename not in documents:
+            documents[filename] = {
+                "filename": filename,
+                "chunk_count": 0,
+                "pages": set()
+            }
+
+        documents[filename]["chunk_count"] += 1
+
+        if page is not None:
+            documents[filename]["pages"].add(page)
+
+    result = []
+
+    for doc in documents.values():
+        result.append({
+            "filename": doc["filename"],
+            "chunk_count": doc["chunk_count"],
+            "page_count": len(doc["pages"])
+        })
+
+    result.sort(key=lambda x: x["filename"])
+
+    return result
+
+
 def get_database_info():
     """
     Returns useful database information for the UI.
     """
+    documents = list_stored_documents()
+
     return {
         "db_path": DB_PATH,
         "collection_name": COLLECTION_NAME,
-        "stored_chunks": get_database_count()
+        "stored_chunks": get_database_count(),
+        "document_count": len(documents)
     }
