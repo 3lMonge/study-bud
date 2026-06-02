@@ -57,6 +57,14 @@ st.sidebar.title("Study Agent")
 
 st.sidebar.markdown("## Documents")
 
+# Initialize active page
+if "active_page" not in st.session_state:
+    st.session_state.active_page = "Upload"
+
+# Track the last selected documents page
+if "last_documents_page" not in st.session_state:
+    st.session_state.last_documents_page = "Upload"
+
 documents_page = st.sidebar.radio(
     "Document Tools",
     [
@@ -64,6 +72,7 @@ documents_page = st.sidebar.radio(
         "Database Status",
         "Test Search"
     ],
+    index=["Upload", "Database Status", "Test Search"].index(st.session_state.last_documents_page),
     label_visibility="collapsed"
 )
 
@@ -78,13 +87,17 @@ chat_selected = st.sidebar.button("Open Chat")
 # Page Routing
 # -----------------------------
 
-if "active_page" not in st.session_state:
-    st.session_state.active_page = "Upload"
-
+# Update navigation based on user action
 if chat_selected:
     st.session_state.active_page = "Chat"
-else:
+elif documents_page != st.session_state.last_documents_page:
+    # User selected a different documents page
     st.session_state.active_page = documents_page
+    st.session_state.last_documents_page = documents_page
+elif st.session_state.active_page not in ["Chat", "Upload", "Database Status", "Test Search"]:
+    # Fallback to Upload if active_page is invalid
+    st.session_state.active_page = "Upload"
+# Otherwise, keep the current active_page (preserves Chat state during interactions)
 
 
 st.title("StudyBud")
